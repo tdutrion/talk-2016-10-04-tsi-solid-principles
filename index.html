@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>SOLID Principles - TSI Payment Brown Bag Lunch</title>
+
+		<meta name="description" content="SOLID Principles - TSI Payment Brown Bag Lunch">
+		<meta name="author" content="Thomas Dutrion">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/tsi.css" id="theme">
+		<link rel="stylesheet" href="css/font-awesome.min.css">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+		<style>
+			table.topics td {
+				font-size: 0.7em;
+			}
+			table.topics td+td {
+				text-align: center;
+			}
+			table.topics td+td i.fa-thumbs-o-up {
+				color: green;
+			}
+			table.topics td+td i.fa-thumbs-o-down {
+				color: red;
+			}
+		</style>
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h1>SOLID Principles</h1>
+					<h3>TSI Payment Brown Bag Lunch #1</h3>
+					<p>
+						<small>Par <a href="https://onename.com/tdutrion">Thomas Dutrion</a> / <a href="https://twitter.com/tdutrion">@tdutrion</a> - 04/10/2016</small>
+					</p>
+				</section>
+
+				<section>
+					<section>
+						<h1>SOLID Principles</h1>
+						<table class="topics">
+							<tbody>
+								<tr>
+									<th>Initiale</th>
+									<th>Nom</th>
+								</tr>
+								<tr>
+									<th>S</th>
+									<td>Responsabilité unique (Single Responsibility Principle)</td>
+								</tr>
+								<tr>
+									<th>O</th>
+									<td>Ouvert/fermé (Open/closed principle)</td>
+								</tr>
+								<tr>
+									<th>L</th>
+									<td>Substitution de Liskov (Liskov substitution Principle)</td>
+								</tr>
+								<tr>
+									<th>I</th>
+									<td>Ségrégation des interfaces (Interface segregation principle)</td>
+								</tr>
+								<tr>
+									<th>D</th>
+									<td>Inversion des dépendances (Dependency Inversion Principle)</td>
+								</tr>
+							</tbody>
+						</table>
+					</section>
+					<section>
+						<h1>Qu'est ce que c'est ?</h1>
+					</section>
+					<section>
+						<p>Un ensemble de "règles" génériques de bonne conduite pour un développement plus fiable et robuste.</p>
+					</section>
+					<section>
+						<h3>Avantages présumés :</h3>
+						<ul>
+							<li>Augmentation directe de la testabilité du code</li>
+							<li>Augmentation partielle de la réutilisabilité des communs</li>
+							<li>Renforcer la cohésion et la lisibilité du code</li>
+							<li>Faciliter le travail en équipe</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>Single Responsibility Principle</h1>
+						<h2>Responsabilité unique</h2>
+					</section>
+					<section>
+						<p>Une classe n'a qu'une seule responsabilité, elle ne sait faire qu'une chose mais le fait bien.</p>
+						<p>Le code de la classe est plus court et donc plus lisible.</p>
+						<p>Les fonctionnalités sont <code>encapsulées</code></p>
+						<p>On réduit le <code>couplage</code> entre les classes</p>
+					</section>
+					<section>
+						<pre><code class="php">class Application_Model_Error
+{
+    private $_message;
+
+    public function setError($message)
+    {
+        $this->_message = $message;
+        $logger = new Tsi_Logger();
+        $logger->critical($message);
+        throw new Exception($message);
+    }
+}</code></pre>
+					</section>
+					<section>
+						<h1>STOP !</h1>
+					</section>
+					<section>
+						<pre><code class="php">declare (strict_types = 1);
+
+namespace Application\Exception;
+
+use Exception;
+use Tsi\Logger;
+
+class SpecificBusinessException extends Exception
+{
+    public function __construct(string $message)
+    {
+        parent::__construct($message, 422);
+        // HTTP code 422: Unprocessable Entity
+    }
+}</code></pre>
+					</section>
+					<section>
+						<pre><code class="php">namespace Tsi\Logger;
+class Logger
+{
+  private $writer;
+  private $formatter;
+  public function __construct(Writer $writer, Formatter $formatter){
+    $this->writter = $writter;
+    $this->formatter = $formatter;
+  }
+  public function critical(\Exception $exception){
+    $this->writter->write(
+      $this->formatter->format($exception)
+    );
+  }
+}</code></pre>
+					</section>
+					<section>
+					<pre><code class="php">use Application\Exception\SpecificBusinessException;
+use Tsi\Logger\{Formatter,Writer,Logger};
+
+$logFormatter = new \Tsi\Logger\Formatter();
+$logWriter = new \Tsi\Logger\Writer();
+$logger = new \Tsi\Logger\Logger($logWriter, $logFormatter);
+
+if ($parameter !== 'desired value') {
+    $exception = new SpecificBusinessException();
+    $logger->critical($exception);
+    throw $exception;
+}
+</code></pre>
+					</section>
+					<section>
+						<p>Chaque classe à maintenant une seule responsabilité :</p>
+						<ul>
+							<li>Contenir le détail de l'erreur (code http, message) [<code>value object</code>]</li>
+							<li>Formatter une erreur en chaine de caractère ou objet exploitable [<code>transformer</code>]</li>
+							<li>Ecrire dans un fichier ou envoyer dans un backend quelconque (redis, elasticsearch, UDP, TCP)</li>
+							<li>Logger un type de données</li>
+						</ul>
+					</section>
+					<section>
+						<p>Un autre exemple : validation de données</p>
+					</section>
+					<section>
+						<pre><code class="php">class Service
+{
+    public function validateData(array $dataSet) {
+        if (!isset($dataSet['val1']) || !is_string($dataSet['val1'])) { ... }
+        if (!isset($dataSet['val2']) || !is_int($dataSet['val2'])) { ... }
+        if (!isset($dataSet['val3']) || !is_a($dataSet['val3'])) { ... }
+    }
+}</code></pre>
+						<pre><code class="php">$dataSet = [
+    'val1' => 'string',
+    'val2' => 1,
+    'val3' => (object) ['val' => 'ok'],
+];
+
+$service = new Service();
+$service->validateData($dataSet);</code></pre>
+					</section>
+					<section>
+						<p>Question mathématique : combien de chemin existe-t-il dans cette fonction ?</p>
+						<p class="fragment">Réponse : un truc avec des puissances de 2, mais je ne suis pas bon en maths...</p>
+					</section>
+					<section>
+						<p>Refactorons :</p>
+					</section>
+					<section>
+						<pre><code class="php">class Service {
+    private $validatorMap = [
+         'val1' => new StringValidator(),
+         'val2' => new IntValidator(),
+         'val3' => new CustomObjectValidator(),
+    ];
+    public function validateData(array $dataSet) {
+        foreach ($this->validatorMap as $target => $validator) {
+            if (!isset($dataSet[$target])) {
+                throw new Exception(...);
+            }
+            $validator->validate($dataSet[$target]);
+        }
+        return true;
+    }
+}</code></pre>
+					</section>
+					<section>
+						<p>Ce code devrait être largement amélioré, mais il suffit pour cette démonstration.</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>Open/closed principle</h1>
+						<h2>Ouvert/fermé</h2>
+					</section>
+					<section>
+						<p>Une classe finalisée (testé et passée en revue de code) ne peut plus être modifié pour servir un autre cas, autrement dit fermée.</p>
+						<p>Une classe fermée doit proposer des moyens d'extension (d'ajout de fonctionnalité par ajout ou modification de composants interagissant avec elle). Cela comprends la composition et l'héritage (polymorphisme).</p>
+					</section>
+					<section>
+						<h3>Oh ! On l'a déjà fait !</h3>
+					</section>
+					<section>
+						<img src="images/simple-logger.png" alt="Class diagram: simple logger with one writer type">
+					</section>
+					<section>
+						<img src="images/logger.png" alt="Class diagram: logger with multiple writer type">
+					</section>
+					<section>
+						<img src="images/aggregateLogger.png" alt="Class diagram: logger with an aggregate of writers">
+					</section>
+					<section>
+						<p>Le système peut donc être étendu de plusieurs façons, sans pour autant modifier la classe existante.</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>Liskov substitution Principle</h1>
+						<h2>Substitution de Liskov</h2>
+					</section>
+					<section>
+						<h1>??????</h1>
+					</section>
+					<section>
+						<p>Une instance de type T doit pouvoir être remplacée par une instance de type G, tel que G sous-type de T, sans que cela ne modifie la cohérence du programme.</p>
+					</section>
+					<section>
+						<h1>????????????????????????</h1>
+					</section>
+					<section>
+						<p>Une classe peut être remplacée par une autre classe partageant le même type primitif, sans modifier le comportement du programme.</p>
+					</section>
+					<section>
+						<section>
+							<pre><code class="php">class Tiger {
+    public function roar() {
+        echo 'ROOAARRRRR!!!!';
+    }
+}</code></pre>
+							<pre><code class="php">class Cat extends Tiger {
+    public function roar() {
+        throw new Exception('Cat purr, they do not roar...');
+    }
+}</code></pre>
+						</section>
+					</section>
+					<section>
+						<p>En partant d'un mauvais héritage, la substitution entraine un nouveau comportement du code donné.</p>
+						<p>Remplacer les héritages par des classes abstraites ou des interfaces spécifiques permet d'éviter ces comportements.</p>
+					</section>
+					<section>
+						<pre><code class="php">interface AnimalInterface {
+    public function makeASound();
+}
+
+class Tiger implements AnimalInterface {
+    public function roar() {
+        return 'ROOAARRRRR!!!!';
+    }
+    public function makeASound() { echo $this->roar(); }
+}
+
+class Cat implements AnimalInterface {
+    public function purr() {
+        return 'puuurrrrr! :)';
+    }
+    public function makeASound() { echo $this->purr(); }
+}</code></pre>
+					</section>
+					<section>
+						<p>La substitution est maintenant réussie, les deux objets ont des comportements différents adaptés à leurs caractéristiques, et le code qui les utilises à le même comportement quel que soit l'objet utilisé.</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>Interface segregation principle</h1>
+						<h2>Ségrégation des interfaces</h2>
+					</section>
+					<section>
+						<p>Séparer les implémentations et le besoin de la classe utilisatrice pour ne garder que l'essence de la classe utilisée.</p>
+						<p>En d'autres termes, utiliser des types très spécifiques pour n'avoir que la méthode nécessaire.</p>
+					</section>
+					<section>
+						<pre><code class="php">class Logger() {
+    public function emergency($message, array $context = array()) { ... }
+    public function alert($message, array $context = array()) { ... }
+    public function critical($message, array $context = array()) { ... }
+    public function error($message, array $context = array()) { ... }
+    public function warning($message, array $context = array()) { ... }
+    public function notice($message, array $context = array()) { ... }
+    public function info($message, array $context = array()) { ... }
+    public function debug($message, array $context = array()) { ... }
+    public function log($level, $message, array $context = array()) { ... }
+}</code></pre>
+					</section>
+					<section>
+						<pre><code class="php">class LoggerUser() {
+    public function methodWithLogger(Logger $logger) {
+        $this->critical('boom!');
+    }
+}</code></pre>
+					</section>
+					<section>
+						<p>Imaginons un test unitaire pour cette méthode : quel est le paramètre d'entrée ?</p>
+					</section>
+					<section>
+						<pre><code class="php">/**
+ * @test
+ */
+public function methodWithLogger_using_mock_logger() {
+    $loggerMock = $this->getMockBuilder(Logger::class)
+        ->methods(array('emergency', 'alert', 'critical', '...'))
+        ->getMock();
+		$loggerMock->method('emergency')
+        ->with(...)
+        ->willReturn('foo');
+    ...
+    $target = (new LoggerUser())->methodWithLogger($loggerMock);
+}</code></pre>
+					</section>
+					<section>
+						<p>Extrayons une meilleur interface, que fait la méthode avec cet objet ?</p>
+					</section>
+					<section>
+						<pre><code class="php">interface CriticalLoggerInterface {
+    public function critical($message, array $context = array()) { ... }
+}
+
+class LoggerUser() {
+    public function methodWithLogger(CriticalLoggerInterface $logger) {
+        $this->critical('boom!');
+    }
+}</code></pre>
+						<pre><code class="php">/**
+ * @test
+ */
+public function methodWithLogger_using_mock_logger() {
+    $loggerMock = $this->getMockBuilder(Logger::class)
+        ->methods(array('critical')
+        ->getMock();
+		$loggerMock->method('critical')
+        ->with(...)
+        ->willReturn('foo');
+    $target = (new LoggerUser())->methodWithLogger($loggerMock);
+}</code></pre>
+					</section>
+					<section>
+						<p>Utiliser un typage très spécifique renforce la testabilité et les garanties de composer avec un objet correspondant au besoin.</p>
+						<p>Une <code>interface</code> peut étendre plusieurs autres interfaces.</p>
+						<p>Un autoload correct (<code>classmap</code>) et un <code>opcache</code> bien configuré reduisent l'impact du chargement de fichier supplémentaires.</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h1>Dependency Inversion Principle</h1>
+						<h2>Inversion des dépendances </h2>
+					</section>
+					<section>
+						<p>A. High-level modules should not depend on low-level modules. Both should depend on abstractions.</p>
+						<p>B. Abstractions should not depend on details. Details should depend on abstractions.</p>
+					</section>
+					<section>
+						<p>Les classes ne doivent pas dépendre d'implementations, mais d'abstractions (interfaces).</p>
+						<p>Les classes seront intégrées (bind) les unes avec les autres à l'aide d'un container d'injection de dépendance (Service Manager en ZF2, fonctionne suivant le ServiceLocator pattern).</p>
+						<p>Les classes n'héritent pas de concretions, elles implémentent des interfaces.</p>
+					</section>
+					<section>
+						<pre><code class="php">namespace Psr\Log;
+
+interface LoggerInterface
+{
+    public function emergency($message, array $context = array());
+    public function alert($message, array $context = array());
+    public function critical($message, array $context = array());
+    public function error($message, array $context = array());
+    public function warning($message, array $context = array());
+    public function notice($message, array $context = array());
+    public function info($message, array $context = array());
+    public function debug($message, array $context = array());
+    public function log($level, $message, array $context = array());
+}</code></pre>
+					</section>
+					<section>
+						<pre><code class="php">namespace Psr\Log;
+
+/**
+ * Describes a logger-aware instance
+ */
+interface LoggerAwareInterface
+{
+    /**
+     * Sets a logger instance on the object
+     *
+     * @param LoggerInterface $logger
+     * @return null
+     */
+    public function setLogger(LoggerInterface $logger);
+}</code></pre>
+					</section>
+					<section>
+						<pre><code class="php">namespace Application\Whatever;
+
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\Logger;
+
+class WithLogger implements LoggerAwareInterface
+{
+    public function useLogger(LoggerInterface $logger) {
+        // do something with the logger
+    }
+}</code></pre>
+					</section>
+					<section>
+						<p>Qui est mon logger ?</p>
+					</section>
+					<section>
+						<p>Un logger perso, si les besoins business le nécésitent.</p>
+						<p>Une librairie standard, testée et maintenue, dans tous les autres cas.</p>
+						<ul>
+							<li><a href="https://github.com/Seldaek/monolog">Monolog</a></li>
+							<li><a href="https://github.com/zendframework/zend-log/blob/master/doc/book/psr3.md">Zend Log</a></li>
+							<li><a href="https://packagist.org/search/?tags=psr-3">et plein d'autres</a></li>
+						</ul>
+					</section>
+					<section>
+						<p>On ne reste pas bloqué sur une implementation.</p>
+						<p>On peut utiliser Zend Log pour écrire dans des fichiers de logs, et Monolog pour envoyer vers Graylog en UDP.</p>
+						<p>La testabilité est renforcée, on peut utiliser un mock ou un null logger pour les tests.</p>
+					</section>
+				</section>
+				<section>
+					<h1>Merci pour votre écoute !</h1>
+				</section>
+				<section>
+					<h1>Agenda :</h1>
+					<ul>
+						<li><a href="https://hacktoberfest.digitalocean.com/">hacktoberfest</a> tout le mois d'Octobre, s'inscrire et faire des PR (#git, #github, #OSS)</li>
+						<li><a href="http://geekmentalhelp.com/">GeekMentalHelp week</a> cette semaine (#geekmentalhelp, #mentalhealth, #community)</li>
+						<li><a href="http://event.afup.org/">PHP 7 (avancé) @ OpenSka</a> 25 octobre 2016 (#community, #continuousLeaarning, #network)</li>
+						<li><a href="http://event.afup.org/">ForumPHP 2016 - AFUP</a> 27 & 28 octobre 2016, Beffroi de Montrouge (#community, #continuousLeaarning, #network)</li>
+					</ul>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				slideNumber: 'c/t',
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
